@@ -1,12 +1,15 @@
 package com.matteomigliore.pcmanager
 
 import android.app.*
+import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
 import android.os.BatteryManager
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
 import okhttp3.*
@@ -30,9 +33,61 @@ class AgentService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForeground(1, notif())
+        DeviceOwner.applyProtections(this) // se siamo Device Owner: blinda subito il telefono
         connect()
         scope.launch { while (isActive) { try { sendUsage(); sendSnapshot() } catch (_: Exception) {}; delay(60_000) } }
+        // Enforcement "duro" via Device Owner: rileva il gioco in primo piano e lo sospende,
+        // SENZA dipendere dall'Accessibilità (che un ragazzo potrebbe disattivare).
+        scope.launch { while (isActive) { try { if (DeviceOwner.isOwner(this@AgentService)) enforceOwner() } catch (_: Exception) {}; delay(5_000) } }
         return START_STICKY
+    }
+
+    /* ── enforcement Device Owner (blocco duro, indipendente dall'Accessibilità) ── */
+    private val ownerSuspended = HashSet<String>()
+    private var ownerGamePkg: String? = null
+    private var ownerGameSince = 0L
+
+    private fun enforceOwner() {
+        val r = GameRules.load(this)
+        val fg = currentForegroundApp()
+        // Accredito il tempo di gioco SOLO se l'Accessibilità è spenta: se è attiva ci pensa
+        // già GameGuardService, e conterei doppio.
+        val accessOff = !isAccessibilityEnabled()
+        if (r.gamesEnabled && fg != null && GameRules.isGame(this, fg, r.tags)) {
+            if (accessOff) {
+                if (ownerGamePkg == fg && ownerGameSince > 0L) {
+                    val secs = ((SystemClock.elapsedRealtime() - ownerGameSince) / 1000).toInt()
+                    if (secs > 0) GameRules.addToday(this, secs)
+                }
+                ownerGamePkg = fg; ownerGameSince = SystemClock.elapsedRealtime()
+            }
+            if (!GameRules.isAllowedNow(this, r)) {
+                DeviceOwner.suspend(this, arrayOf(fg), true); ownerSuspended.add(fg)
+                startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+        } else {
+            ownerGamePkg = null; ownerGameSince = 0L
+        }
+        // Torna in fascia consentita → riapri i giochi sospesi.
+        if (GameRules.isAllowedNow(this, r) && ownerSuspended.isNotEmpty()) {
+            DeviceOwner.suspend(this, ownerSuspended.toTypedArray(), false); ownerSuspended.clear()
+        }
+    }
+
+    /** Pacchetto in primo piano ora, dagli eventi UsageStats (ultimi 10s). */
+    private fun currentForegroundApp(): String? {
+        val usm = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val now = System.currentTimeMillis()
+        val ev = usm.queryEvents(now - 10_000, now)
+        val e = UsageEvents.Event(); var last: String? = null
+        while (ev.hasNextEvent()) { ev.getNextEvent(e); if (e.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND) last = e.packageName }
+        return last
+    }
+
+    /** Il nostro servizio di Accessibilità è attualmente attivo? */
+    private fun isAccessibilityEnabled(): Boolean {
+        val flat = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: return false
+        return flat.contains("$packageName/")
     }
 
     private fun token(): String =
@@ -55,7 +110,8 @@ class AgentService : Service() {
             if (o.optString("cmd") == "rules") {
                 getSharedPreferences("pcm", MODE_PRIVATE).edit()
                     .putString("rules", o.optJSONObject("rules")?.toString() ?: "{}").apply()
-                // TODO: applicare le regole (vedi README: blocco via Accessibility/DeviceOwner)
+                // Le regole aggiornate vengono lette da GameGuardService (Accessibilità) e da
+                // enforceOwner() (Device Owner) alla prossima valutazione.
             }
         } catch (_: Exception) {}
     }
@@ -83,6 +139,7 @@ class AgentService : Service() {
             .put("timestampUtc", java.time.Instant.now().toString())
             .put("temperatures", JSONArray()).put("fans", JSONArray()).put("loads", JSONArray())
             .put("admin", true).put("monitors", 1).put("battery", level)
+            .put("deviceOwner", DeviceOwner.isOwner(this))
         ws?.send(JSONObject().put("type", "snapshot").put("data", data).toString())
     }
 

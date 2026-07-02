@@ -45,13 +45,26 @@ Apri la cartella `android-agent`, sincronizza Gradle, `Build > Build APK(s)`.
 3. **Concedi accesso all'utilizzo** (monitoraggio) e **Avvia agente**.
 4. **Attiva blocco giochi (Accessibilità)** → abilita "PC Manager — Blocco giochi" (blocco morbido).
 
-## Blocco "duro" (inaggirabile) — Device Owner (opzionale)
-Su un telefono **senza account Google configurati** (reset di fabbrica), via USB con adb:
+## Blocco "duro" (inaggirabile) — Device Owner
+Su un telefono **senza account Google configurati** (nuovo o reset di fabbrica), via USB con adb:
 ```
 adb shell dpm set-device-owner com.matteomigliore.pcmanager/.AdminReceiver
 ```
-Da quel momento l'agente può **sospendere** i giochi (blocco vero, non solo Home), e l'utente
-non può disattivare l'Accessibilità con la stessa facilità. Senza Device Owner resta il blocco morbido.
+(La stessa cosa si attiva dall'app: **Attiva/aggiorna blocco totale** → mostra il comando.)
+
+Appena diventa Device Owner, l'agente applica **da solo** le protezioni (`DeviceOwner.applyProtections`):
+- **sospende i giochi** fuori fascia/oltre il tempo (blocco vero, non solo Home);
+- **enforcement dal foreground service** (`AgentService.enforceOwner`) che rileva il gioco in primo
+  piano via UsageStats e lo sospende **anche se l'Accessibilità è spenta** — quindi il ragazzo
+  non aggira il blocco disattivando l'Accessibilità;
+- **anti-bypass**: `setUninstallBlocked` (non disinstallabile) + restrizioni utente
+  (`DISALLOW_FACTORY_RESET`, `DISALLOW_SAFE_BOOT`, `DISALLOW_DEBUGGING_FEATURES`,
+  `DISALLOW_ADD_USER`, `DISALLOW_UNINSTALL_APPS`, `DISALLOW_APPS_CONTROL`) +
+  `setPermittedAccessibilityServices` limitato al nostro servizio.
+
+Per cedere/disinstallare il telefono: **Rimuovi blocco totale (Device Owner)** nell'app
+(`DeviceOwner.release`) toglie le protezioni e rilascia il Device Owner. Senza Device Owner
+resta il solo blocco morbido (Home) via Accessibilità.
 
 ## File principali
 - `app/src/main/java/.../MainActivity.kt` — pairing + permessi.

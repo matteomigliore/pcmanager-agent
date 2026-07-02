@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical" android:padding="24dp"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent">
+<LinearLayout
+    android:orientation="vertical" android:padding="24dp"
+    android:layout_width="match_parent" android:layout_height="wrap_content">
 
     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
         android:text="PC Manager — Agente" android:textSize="22sp" android:textStyle="bold"
@@ -21,6 +23,19 @@
     <Button android:id="@+id/accessibility" android:layout_width="match_parent" android:layout_height="wrap_content"
         android:text="Attiva blocco giochi (Accessibilità)" android:layout_marginTop="8dp" />
 
+    <View android:layout_width="match_parent" android:layout_height="1dp"
+        android:background="#22FFFFFF" android:layout_marginTop="18dp" />
+    <TextView android:id="@+id/doStatus" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="Blocco totale (Device Owner): —" android:textStyle="bold" android:layout_marginTop="14dp" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="Il blocco totale rende i giochi inaggirabili e impedisce di disinstallare o disattivare l'agente."
+        android:textColor="#94a3b8" android:paddingTop="4dp" />
+    <Button android:id="@+id/doApply" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Attiva/aggiorna blocco totale" android:layout_marginTop="8dp" />
+    <Button android:id="@+id/doRelease" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Rimuovi blocco totale (Device Owner)" android:layout_marginTop="8dp" />
+
     <TextView android:id="@+id/status" android:layout_width="wrap_content" android:layout_height="wrap_content"
         android:text="" android:paddingTop="16dp" android:textColor="#22c55e" />
 </LinearLayout>
+</ScrollView>
