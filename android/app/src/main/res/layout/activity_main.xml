@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:padding="24dp"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="PC Manager — Agente" android:textSize="22sp" android:textStyle="bold"
+        android:paddingBottom="16dp" />
+
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="Token dispositivo (dall'app web)" android:paddingBottom="6dp" />
+    <EditText android:id="@+id/token" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:hint="incolla qui il token" android:inputType="text" />
+
+    <Button android:id="@+id/save" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Salva token" android:layout_marginTop="8dp" />
+    <Button android:id="@+id/grant" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Concedi accesso all'utilizzo" android:layout_marginTop="8dp" />
+    <Button android:id="@+id/start" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Avvia agente" android:layout_marginTop="8dp" />
+    <Button android:id="@+id/accessibility" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Attiva blocco giochi (Accessibilità)" android:layout_marginTop="8dp" />
+
+    <TextView android:id="@+id/status" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="" android:paddingTop="16dp" android:textColor="#22c55e" />
+</LinearLayout>

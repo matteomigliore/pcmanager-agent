@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PC Manager</string>
+    <string name="accessibility_label">PC Manager — Blocco giochi</string>
+    <string name="accessibility_desc">Consente a PC Manager di rilevare il gioco in primo piano e bloccarlo fuori dalle fasce orarie o oltre il tempo massimo impostati dal genitore.</string>
+</resources>
