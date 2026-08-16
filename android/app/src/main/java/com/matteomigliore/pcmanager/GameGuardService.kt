@@ -46,9 +46,16 @@ class GameGuardService : AccessibilityService() {
     override fun onServiceConnected() { handler.postDelayed(tick, 30_000) }
 
     override fun onAccessibilityEvent(e: AccessibilityEvent) {
-        if (e.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val pkg = e.packageName?.toString() ?: return
         if (pkg == packageName || pkg == "com.android.systemui") return
+
+        // Siti: la barra degli indirizzi cambia anche SENZA cambio di finestra (si naviga dentro
+        // lo stesso browser), quindi qui si guardano pure gli aggiornamenti di contenuto.
+        if (SiteGuard.ePossibileBrowser(pkg)) {
+            try { SiteGuard.controlla(this, pkg) } catch (_: Exception) {}
+        }
+
+        if (e.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val r = GameRules.load(this)
         val isGame = r.gamesEnabled && GameRules.isGame(this, pkg, r.tags)
         if (isGame) {

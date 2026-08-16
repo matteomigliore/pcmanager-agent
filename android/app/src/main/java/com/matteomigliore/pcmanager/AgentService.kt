@@ -169,6 +169,10 @@ class AgentService : Service() {
             items.put(JSONObject().put("winUser", "").put("app", app).put("seconds", minOf(secs, 60)))
         }
         if (items.length() > 0) ws?.send(JSONObject().put("type", "usage").put("items", items).toString())
+        // Siti visitati: gli host raccolti dalla barra degli indirizzi (SiteGuard). Sul telefono
+        // la cronologia del browser non e' leggibile, quindi questa e' l'unica fonte possibile.
+        val siti = SiteGuard.svuotaCoda(this)
+        if (siti.length() > 0) ws?.send(JSONObject().put("type", "sites").put("items", siti).toString())
     }
 
     /** Stato Android reale, raccolto esclusivamente con API locali e senza privilegi root. */
