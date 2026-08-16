@@ -43,6 +43,14 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Attiva 'PC Manager — Blocco giochi'", Toast.LENGTH_LONG).show()
         }
 
+        // Filtro siti: Android esige un consenso esplicito alla VPN, e puo' chiederlo SOLO
+        // un'activity. Da qui in poi il servizio la accende e spegne da solo secondo le regole.
+        findViewById<Button>(R.id.vpn).setOnClickListener {
+            val consenso = android.net.VpnService.prepare(this)
+            if (consenso != null) startActivityForResult(consenso, 7001)
+            else { startService(Intent(this, SiteVpnService::class.java)); Toast.makeText(this, "Filtro siti attivo.", Toast.LENGTH_SHORT).show() }
+        }
+
         findViewById<Button>(R.id.doApply).setOnClickListener {
             if (DeviceOwner.isOwner(this)) {
                 DeviceOwner.applyProtections(this)
@@ -59,6 +67,15 @@ class MainActivity : AppCompatActivity() {
                 .setNegativeButton("Annulla", null).show()
         }
         refreshDoStatus()
+    }
+
+    @Deprecated("startActivityForResult: qui serve, e' l'unico modo per il consenso VPN")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        @Suppress("DEPRECATION") super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 7001 && resultCode == RESULT_OK) {
+            startService(Intent(this, SiteVpnService::class.java))
+            Toast.makeText(this, "Filtro siti attivo.", Toast.LENGTH_SHORT).show()
+        }
     }
 
     override fun onResume() { super.onResume(); refreshDoStatus() }

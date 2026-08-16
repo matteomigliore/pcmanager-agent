@@ -59,7 +59,32 @@ class AgentService : Service() {
         // Enforcement "duro" via Device Owner: rileva il gioco in primo piano e lo sospende,
         // SENZA dipendere dall'Accessibilità (che un ragazzo potrebbe disattivare).
         scope.launch { while (isActive) { try { if (DeviceOwner.isOwner(this@AgentService)) enforceOwner() } catch (_: Exception) {}; delay(5_000) } }
+        // Filtro siti di rete: si accende da solo quando il profilo ha regole sui siti, e si
+        // spegne quando non servono piu' (una VPN accesa a vuoto e' solo peso e sospetto).
+        scope.launch { while (isActive) { try { governaVpn() } catch (_: Exception) {}; delay(30_000) } }
         return START_STICKY
+    }
+
+    /**
+     * Accende/spegne il filtro siti di rete in base alle regole del profilo.
+     *
+     * Il consenso alla VPN lo da' l'utente una volta sola (o il Device Owner, che lo concede
+     * senza chiedere nulla). Con Device Owner la VPN viene anche resa SEMPRE ATTIVA con blocco
+     * del traffico: se qualcuno la spegne, il telefono resta senza rete invece che senza filtro.
+     */
+    private fun governaVpn() {
+        val servono = SiteRules.load(this).attive
+        if (servono && !SiteVpnService.attiva) {
+            // null = consenso gia' dato (o siamo Device Owner): possiamo partire da soli.
+            if (android.net.VpnService.prepare(this) == null) {
+                try {
+                    startService(Intent(this, SiteVpnService::class.java))
+                    if (DeviceOwner.isOwner(this)) DeviceOwner.vpnSempreAttiva(this)
+                } catch (_: Exception) {}
+            }
+        } else if (!servono && SiteVpnService.attiva) {
+            try { startService(Intent(this, SiteVpnService::class.java).setAction(SiteVpnService.AZIONE_STOP)) } catch (_: Exception) {}
+        }
     }
 
     /* ── enforcement Device Owner (blocco duro, indipendente dall'Accessibilità) ── */

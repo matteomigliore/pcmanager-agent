@@ -23,6 +23,9 @@
     <Button android:id="@+id/accessibility" android:layout_width="match_parent" android:layout_height="wrap_content"
         android:text="Attiva blocco giochi (Accessibilità)" android:layout_marginTop="8dp" />
 
+    <Button android:id="@+id/vpn" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Attiva filtro siti (VPN locale)" android:layout_marginTop="8dp" />
+
     <View android:layout_width="match_parent" android:layout_height="1dp"
         android:background="#22FFFFFF" android:layout_marginTop="18dp" />
     <TextView android:id="@+id/doStatus" android:layout_width="wrap_content" android:layout_height="wrap_content"

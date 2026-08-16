@@ -46,12 +46,27 @@ object DeviceOwner {
      * Rimuove tutte le protezioni e RILASCIA il Device Owner: da usare per disinstallare
      * l'app o cedere il telefono. Dopo questo l'agente torna gestibile/disinstallabile.
      */
+    /**
+     * Rende il filtro siti SEMPRE ATTIVO e obbligatorio: se qualcuno prova a spegnere la VPN, il
+     * telefono resta senza rete anziche' senza filtro (lockdown). Solo con Device Owner.
+     */
+    fun vpnSempreAttiva(ctx: Context) {
+        if (!isOwner(ctx)) return
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= 29)
+                dpm(ctx).setAlwaysOnVpnPackage(admin(ctx), ctx.packageName, true, null)
+            else
+                dpm(ctx).setAlwaysOnVpnPackage(admin(ctx), ctx.packageName, true)
+        } catch (_: Exception) { /* il telefono non lo consente: resta la VPN normale */ }
+    }
+
     fun release(ctx: Context) {
         if (!isOwner(ctx)) return
         val dpm = dpm(ctx); val admin = admin(ctx)
         for (r in RESTRICTIONS) try { dpm.clearUserRestriction(admin, r) } catch (_: Exception) {}
         try { dpm.setUninstallBlocked(admin, ctx.packageName, false) } catch (_: Exception) {}
         try { dpm.setPermittedAccessibilityServices(admin, null) } catch (_: Exception) {}
+        try { dpm.setAlwaysOnVpnPackage(admin, null, false) } catch (_: Exception) {}
         try { @Suppress("DEPRECATION") dpm.clearDeviceOwnerApp(ctx.packageName) } catch (_: Exception) {}
     }
 }
