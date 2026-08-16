@@ -133,8 +133,41 @@ class MainActivity : AppCompatActivity() {
             findViewById<TextView>(R.id.drawerDisp).text = nome
             findViewById<TextView>(R.id.avatarTop).text = ini
             findViewById<TextView>(R.id.avatarDrawer).text = ini
+            // Foto: avatar caricato dall'utente, altrimenti Gravatar. Se non c'e' nessuna delle
+            // due, restano le iniziali gia' scritte sopra: nessun buco nell'interfaccia.
+            caricaFoto(o.optString("avatar", ""), o.optString("gravatar", ""))
         }
     }
+
+    /** Scarica la foto una volta sola e la mette nei due cerchi (barra e menu). */
+    private fun caricaFoto(avatar: String, gravatar: String) {
+        if (fotoMostrata) return
+        scope.launch {
+            val bmp = withContext(Dispatchers.IO) {
+                try {
+                    val byte = when {
+                        avatar.startsWith("data:") -> android.util.Base64.decode(avatar.substringAfter(","), android.util.Base64.DEFAULT)
+                        gravatar.isNotEmpty() -> {
+                            val c = URL(gravatar).openConnection() as HttpURLConnection
+                            c.connectTimeout = 8000; c.readTimeout = 8000; c.instanceFollowRedirects = true
+                            if (c.responseCode != 200) null else c.inputStream.use { it.readBytes() }
+                        }
+                        else -> null
+                    } ?: return@withContext null
+                    android.graphics.BitmapFactory.decodeByteArray(byte, 0, byte.size)
+                } catch (_: Exception) { null }
+            } ?: return@launch
+            fotoMostrata = true
+            val tonda = androidx.core.graphics.drawable.RoundedBitmapDrawableFactory.create(resources, bmp)
+                .apply { isCircular = true }
+            for (id in listOf(R.id.avatarTop, R.id.avatarDrawer)) {
+                val v = findViewById<TextView>(id)
+                v.text = ""
+                v.background = tonda
+            }
+        }
+    }
+    private var fotoMostrata = false
 
     private fun segna(icona: Int, testo: Int, ok: Boolean, seOk: String, seNo: String) {
         val i = findViewById<TextView>(icona)
