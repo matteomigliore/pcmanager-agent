@@ -232,7 +232,7 @@ class AgentService : Service() {
             .put("device", JSONObject()
                 .put("manufacturer", Build.MANUFACTURER).put("model", Build.MODEL)
                 .put("android", Build.VERSION.RELEASE).put("sdk", Build.VERSION.SDK_INT)
-                .put("refreshRateHz", display?.mode?.refreshRate ?: 0f))
+                .put("refreshRateHz", (display?.mode?.refreshRate ?: 0f).toDouble()))
             .put("system", JSONObject()
                 .put("ramPct", round1(ramPct))
                 .put("ramUsedBytes", mem.totalMem - mem.availMem)
