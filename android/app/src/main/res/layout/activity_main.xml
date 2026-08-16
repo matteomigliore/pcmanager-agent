@@ -160,6 +160,40 @@
                         <TextView android:tag="fa" android:layout_width="wrap_content" android:layout_height="wrap_content"
                             android:text="&#xf105;" android:textSize="16sp" android:textColor="@color/muted" />
                     </LinearLayout>
+                    <LinearLayout android:id="@+id/rigaBatteria"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:gravity="center_vertical"
+                        android:background="@drawable/bg_riga" android:padding="12dp" android:layout_marginTop="8dp">
+                        <TextView android:id="@+id/icoBatteria" android:tag="fa"
+                            android:layout_width="24dp" android:layout_height="wrap_content"
+                            android:text="&#xf057;" android:textSize="15sp" android:textColor="@color/bad" />
+                        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="6dp">
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                                android:text="Funziona in background" android:textColor="@color/txt" android:textSize="14sp" />
+                            <TextView android:id="@+id/statoBatteria" android:layout_width="match_parent"
+                                android:layout_height="wrap_content" android:text="…" style="@style/Muted" />
+                        </LinearLayout>
+                        <TextView android:tag="fa" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="&#xf105;" android:textSize="16sp" android:textColor="@color/muted" />
+                    </LinearLayout>
+                    <LinearLayout android:id="@+id/rigaAutostart"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:gravity="center_vertical"
+                        android:background="@drawable/bg_riga" android:padding="12dp" android:layout_marginTop="8dp">
+                        <TextView android:id="@+id/icoAutostart" android:tag="fa"
+                            android:layout_width="24dp" android:layout_height="wrap_content"
+                            android:text="&#xf057;" android:textSize="15sp" android:textColor="@color/bad" />
+                        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="6dp">
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                                android:text="Avvio automatico (Xiaomi)" android:textColor="@color/txt" android:textSize="14sp" />
+                            <TextView android:id="@+id/statoAutostart" android:layout_width="match_parent"
+                                android:layout_height="wrap_content" android:text="…" style="@style/Muted" />
+                        </LinearLayout>
+                        <TextView android:tag="fa" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="&#xf105;" android:textSize="16sp" android:textColor="@color/muted" />
+                    </LinearLayout>
                 </LinearLayout>
 
                 <!-- ═══ COLLEGAMENTO ═══ -->

@@ -59,11 +59,33 @@ class MainActivity : AppCompatActivity() {
         // Si usa lo scanner di sistema di Play Services: nessun permesso fotocamera da chiedere.
         findViewById<View>(R.id.scanQr).setOnClickListener { inquadra() }
 
+        // Le schermate di sistema generiche costringono a cercare l'app in un elenco lunghissimo.
+        // Dove Android lo consente si punta direttamente alla nostra voce.
         findViewById<View>(R.id.rigaUso).setOnClickListener {
-            startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+            apri(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS, android.net.Uri.parse("package:$packageName")),
+                 Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+            msg("Attiva 'PC Manager'")
         }
         findViewById<View>(R.id.rigaAcc).setOnClickListener {
-            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            // Android non permette di puntare al singolo servizio: si apre l'elenco.
+            apri(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            msg("Attiva 'PC Manager - Blocco giochi'")
+        }
+        // Batteria: e' l'unico che si concede con un solo tocco, senza girare nei menu.
+        findViewById<View>(R.id.rigaBatteria).setOnClickListener {
+            if (batteriaLibera()) { msg("Gia' attivo."); return@setOnClickListener }
+            @android.annotation.SuppressLint("BatteryLife")
+            val i = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                android.net.Uri.parse("package:$packageName"))
+            apri(i, Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+        }
+        // Autostart: voce proprietaria Xiaomi, si punta alla schermata della Sicurezza.
+        findViewById<View>(R.id.rigaAutostart).setOnClickListener {
+            apri(
+                Intent().setClassName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity"),
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:$packageName"))
+            )
+            msg("Attiva 'PC Manager'")
         }
         findViewById<View>(R.id.rigaVpn).setOnClickListener {
             val consenso = android.net.VpnService.prepare(this)
@@ -142,6 +164,10 @@ class MainActivity : AppCompatActivity() {
             "Attivo", "Tocca per attivarlo: serve a bloccare giochi e siti")
         segna(R.id.icoVpn, R.id.statoVpn, SiteVpnService.attiva,
             "Attivo", "Si accende da solo quando il profilo ha siti da bloccare")
+        segna(R.id.icoBatteria, R.id.statoBatteria, batteriaLibera(),
+            "Attivo", "Tocca e conferma: senza, il telefono spegne l'agente dopo qualche ora")
+        segna(R.id.icoAutostart, R.id.statoAutostart, true,
+            "Da verificare in Sicurezza", "Tocca per aprire l'elenco Avvio automatico")
 
         findViewById<TextView>(R.id.versione).text = "versione ${nomeVersione()} · build ${Updater.currentBuild(this)}"
         findViewById<TextView>(R.id.statoChip).text = if (collegato) "collegato" else "non collegato"
@@ -222,6 +248,20 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.tokenInserimento).visibility = if (mostra) View.VISIBLE else View.GONE
         findViewById<View>(R.id.tokenSalvato).visibility = if (mostra) View.GONE else View.VISIBLE
     }
+
+
+    /** Prova gli intent in ordine: i telefoni non supportano tutti le stesse scorciatoie. */
+    private fun apri(vararg intents: Intent) {
+        for (i in intents) {
+            try { startActivity(i); return } catch (_: Exception) { }
+        }
+        msg("Schermata non disponibile su questo telefono.")
+    }
+
+    private fun batteriaLibera(): Boolean = try {
+        val pm = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        pm.isIgnoringBatteryOptimizations(packageName)
+    } catch (_: Exception) { false }
 
     private fun avviaAgente() {
         try {
