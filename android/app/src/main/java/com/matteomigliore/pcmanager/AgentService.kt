@@ -246,6 +246,10 @@ class AgentService : Service() {
             .put("timestampUtc", java.time.Instant.now().toString())
             .put("temperatures", temperatures).put("fans", JSONArray()).put("loads", JSONArray())
             .put("admin", true).put("monitors", 1).put("battery", level)
+            // Versione dell'app: senza questi campi la dashboard non puo' mostrare quale build
+            // gira sul telefono (restava un "v?" e non si capiva se l'aggiornamento era arrivato).
+            .put("build", Updater.currentBuild(this))
+            .put("version", try { packageManager.getPackageInfo(packageName, 0).versionName ?: "" } catch (_: Exception) { "" })
             .put("deviceOwner", DeviceOwner.isOwner(this))
             .put("diagnostic", diagnostic)
             .put("device", JSONObject()
