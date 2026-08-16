@@ -34,9 +34,28 @@ jobs:
         with:
           gradle-version: '8.7'
 
+      # Chiave di firma stabile: senza, ogni runner ne genererebbe una diversa e Android
+      # rifiuterebbe gli aggiornamenti ("signatures do not match"), obbligando a disinstallare
+      # e ricollegare l'app su ogni telefono.
+      - name: Ripristina chiave di firma
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+        run: |
+          if [ -z "$KS_B64" ]; then echo "::error::manca il secret ANDROID_KEYSTORE_B64"; exit 1; fi
+          echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/pcmanager.jks"
+
       - name: Build debug APK
         working-directory: android
+        env:
+          ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/pcmanager.jks
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: gradle assembleDebug --no-daemon --stacktrace
+
+      - name: Verifica firma
+        run: |
+          APKSIGNER=$(ls $ANDROID_HOME/build-tools/34.0.0/apksigner)
+          "$APKSIGNER" verify --print-certs android/app/build/outputs/apk/debug/app-debug.apk | grep -i "SHA-256 digest" | head -1
 
       - name: Stage APK
         run: cp android/app/build/outputs/apk/debug/app-debug.apk PCAgentSetup.apk

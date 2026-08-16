@@ -11,13 +11,38 @@ android {
         applicationId = "com.matteomigliore.pcmanager"
         minSdk = 26
         targetSdk = 34
-        versionCode = 5
-        versionName = "0.5.0"
+        versionCode = 6
+        versionName = "0.5.1"
+    }
+    /*
+     * Chiave di firma STABILE.
+     *
+     * Prima si usava la firma di debug generata al volo dalla macchina che compilava: cambiando
+     * ad ogni build, Android rifiutava l'aggiornamento ("signatures do not match") e l'app andava
+     * disinstallata e reinstallata ogni volta, perdendo il collegamento al cloud. Con una chiave
+     * fissa (dai secret della pipeline) gli aggiornamenti si installano sopra, senza perdere nulla.
+     * In locale, senza la chiave, si ripiega sulla firma di debug per poter comunque compilare.
+     */
+    signingConfigs {
+        create("stabile") {
+            val ks = System.getenv("ANDROID_KEYSTORE_FILE")
+            if (ks != null && file(ks).exists()) {
+                storeFile = file(ks)
+                storePassword = System.getenv("ANDROID_STORE_PASSWORD")
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD") ?: System.getenv("ANDROID_STORE_PASSWORD")
+            }
+        }
     }
     buildTypes {
+        val conChiave = System.getenv("ANDROID_KEYSTORE_FILE")?.let { file(it).exists() } ?: false
+        debug {
+            if (conChiave) signingConfig = signingConfigs.getByName("stabile")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            if (conChiave) signingConfig = signingConfigs.getByName("stabile")
         }
     }
     compileOptions {
