@@ -200,6 +200,15 @@
                     <LinearLayout android:id="@+id/tokenInserimento"
                         android:layout_width="match_parent" android:layout_height="wrap_content"
                         android:orientation="vertical" android:layout_marginTop="12dp">
+                        <TextView android:id="@+id/scanQr"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:text="Inquadra QR" android:gravity="center"
+                            android:textColor="#FFFFFF" android:textSize="15sp" android:textStyle="bold"
+                            android:background="@drawable/bg_btn" android:padding="13dp"
+                            android:layout_marginBottom="10dp" />
+                        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:text="oppure incolla il codice" android:gravity="center"
+                            style="@style/Muted" android:layout_marginBottom="8dp" />
                         <EditText android:id="@+id/token"
                             android:layout_width="match_parent" android:layout_height="wrap_content"
                             android:hint="Incolla qui il codice del dispositivo"

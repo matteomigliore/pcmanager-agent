@@ -54,6 +54,11 @@ class MainActivity : AppCompatActivity() {
         }
         findViewById<View>(R.id.cambiaToken).setOnClickListener { mostraInserimento(true) }
 
+        // Inquadra il QR mostrato dalla dashboard: niente codici da copiare a mano, niente
+        // rischio di collegare due telefoni allo stesso dispositivo per un incolla sbagliato.
+        // Si usa lo scanner di sistema di Play Services: nessun permesso fotocamera da chiedere.
+        findViewById<View>(R.id.scanQr).setOnClickListener { inquadra() }
+
         findViewById<View>(R.id.rigaUso).setOnClickListener {
             startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
         }
@@ -85,6 +90,32 @@ class MainActivity : AppCompatActivity() {
         @Suppress("DEPRECATION") super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == 7001 && resultCode == RESULT_OK) {
             startService(Intent(this, SiteVpnService::class.java)); msg("Filtro siti attivo.")
+        }
+    }
+
+    /** Legge un QR e collega il telefono. Accetta sia il token nudo sia pcmanager://pair?token=… */
+    private fun inquadra() {
+        try {
+            val opzioni = com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE
+            val scanner = com.google.android.gms.mlkit.vision.barcode.GmsBarcodeScanning.getClient(
+                this,
+                com.google.android.gms.mlkit.vision.barcode.GmsBarcodeScannerOptions.Builder()
+                    .setBarcodeFormats(opzioni).enableAutoZoom().build()
+            )
+            scanner.startScan()
+                .addOnSuccessListener { codice ->
+                    val letto = (codice.rawValue ?: "").trim()
+                    val tok = if (letto.contains("token=")) letto.substringAfter("token=").substringBefore("&") else letto
+                    if (tok.length < 10) { msg("QR non valido: non contiene un codice dispositivo."); return@addOnSuccessListener }
+                    sp.edit().putString("token", tok).apply()
+                    avviaAgente()
+                    msg("Collegato.")
+                    aggiorna()
+                }
+                .addOnFailureListener { msg("Lettura non riuscita. Riprova o incolla il codice.") }
+                .addOnCanceledListener { }
+        } catch (_: Exception) {
+            msg("Scanner non disponibile su questo telefono: incolla il codice.")
         }
     }
 

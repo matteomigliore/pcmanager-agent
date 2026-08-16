@@ -11,8 +11,8 @@ android {
         applicationId = "com.matteomigliore.pcmanager"
         minSdk = 26
         targetSdk = 34
-        versionCode = 9
-        versionName = "0.6.1"
+        versionCode = 10
+        versionName = "0.7.0"
     }
     /*
      * Chiave di firma STABILE.
@@ -57,6 +57,8 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.drawerlayout:drawerlayout:1.2.0")
+    // scanner QR di sistema: nessun permesso fotocamera da chiedere, nessuna anteprima da gestire
+    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
     implementation("com.google.android.material:material:1.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
