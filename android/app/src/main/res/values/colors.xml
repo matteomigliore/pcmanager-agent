@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Stessa tavolozza della dashboard web: l'app del telefono e il pannello devono sembrare
+     la stessa cosa, non due prodotti diversi. -->
+<resources>
+    <color name="bg">#0A0E16</color>
+    <color name="card">#121A2B</color>
+    <color name="card2">#0F1626</color>
+    <color name="border">#1E293B</color>
+    <color name="txt">#EEF2F8</color>
+    <color name="muted">#93A1B8</color>
+    <color name="muted2">#64748B</color>
+    <color name="accent">#F97316</color>
+    <color name="accent2">#FB923C</color>
+    <color name="ok">#22C55E</color>
+    <color name="warn">#F59E0B</color>
+    <color name="bad">#EF4444</color>
+</resources>

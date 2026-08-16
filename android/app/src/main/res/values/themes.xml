@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Tema scuro fisso: l'app deve avere lo stesso aspetto della dashboard su ogni telefono,
+         a prescindere dalle preferenze di sistema (e su MIUI il tema chiaro rendeva illeggibili
+         diversi testi). -->
+    <style name="Theme.PCManager" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorSecondary">@color/accent2</item>
+        <item name="android:colorBackground">@color/bg</item>
+        <item name="colorSurface">@color/card</item>
+        <item name="colorOnSurface">@color/txt</item>
+        <item name="android:statusBarColor">@color/bg</item>
+        <item name="android:navigationBarColor">@color/bg</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
+    </style>
+
+    <!-- Titolo di sezione dentro le schede -->
+    <style name="SectionTitle">
+        <item name="android:textColor">@color/txt</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="Muted">
+        <item name="android:textColor">@color/muted</item>
+        <item name="android:textSize">12.5sp</item>
+    </style>
+</resources>

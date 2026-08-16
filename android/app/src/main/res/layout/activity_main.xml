@@ -1,44 +1,280 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent">
-<LinearLayout
-    android:orientation="vertical" android:padding="24dp"
-    android:layout_width="match_parent" android:layout_height="wrap_content">
+<!--
+  Schermata unica, organizzata per schede: prima "a che punto siamo" (stato), poi le cose da
+  sistemare (permessi), poi le impostazioni. Il menu laterale si apre dall'hamburger.
+  Le icone sono FontAwesome: le TextView con tag "fa" ricevono il font da MainActivity.
+-->
+<androidx.drawerlayout.widget.DrawerLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/drawer"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true">
 
-    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:text="PC Manager — Agente" android:textSize="22sp" android:textStyle="bold"
-        android:paddingBottom="16dp" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="@color/bg">
 
-    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:text="Token dispositivo (dall'app web)" android:paddingBottom="6dp" />
-    <EditText android:id="@+id/token" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:hint="incolla qui il token" android:inputType="text" />
+        <!-- barra superiore con hamburger e avatar -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="12dp">
 
-    <Button android:id="@+id/save" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="Salva token" android:layout_marginTop="8dp" />
-    <Button android:id="@+id/grant" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="Concedi accesso all'utilizzo" android:layout_marginTop="8dp" />
-    <Button android:id="@+id/start" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="Avvia agente" android:layout_marginTop="8dp" />
-    <Button android:id="@+id/accessibility" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="Attiva blocco giochi (Accessibilità)" android:layout_marginTop="8dp" />
+            <TextView android:id="@+id/menuBtn" android:tag="fa"
+                android:layout_width="42dp" android:layout_height="42dp"
+                android:gravity="center" android:text="&#xf0c9;"
+                android:textSize="20sp" android:textColor="@color/txt"
+                android:background="@drawable/bg_btn_ghost" />
 
-    <Button android:id="@+id/vpn" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="Attiva filtro siti (VPN locale)" android:layout_marginTop="8dp" />
+            <TextView
+                android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:layout_marginStart="12dp"
+                android:text="@string/app_name"
+                android:textColor="@color/txt" android:textSize="19sp" android:textStyle="bold" />
 
-    <View android:layout_width="match_parent" android:layout_height="1dp"
-        android:background="#22FFFFFF" android:layout_marginTop="18dp" />
-    <TextView android:id="@+id/doStatus" android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:text="Blocco totale (Device Owner): —" android:textStyle="bold" android:layout_marginTop="14dp" />
-    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:text="Il blocco totale rende i giochi inaggirabili e impedisce di disinstallare o disattivare l'agente."
-        android:textColor="#94a3b8" android:paddingTop="4dp" />
-    <Button android:id="@+id/doApply" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="Attiva/aggiorna blocco totale" android:layout_marginTop="8dp" />
-    <Button android:id="@+id/doRelease" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="Rimuovi blocco totale (Device Owner)" android:layout_marginTop="8dp" />
+            <TextView android:id="@+id/avatarTop"
+                android:layout_width="38dp" android:layout_height="38dp"
+                android:gravity="center" android:text="?"
+                android:textColor="#FFFFFF" android:textSize="14sp" android:textStyle="bold"
+                android:background="@drawable/bg_avatar" />
+        </LinearLayout>
 
-    <TextView android:id="@+id/status" android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:text="" android:paddingTop="16dp" android:textColor="#22c55e" />
-</LinearLayout>
-</ScrollView>
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <!-- ═══ STATO ═══ -->
+                <LinearLayout android:id="@+id/cardStato"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="vertical" android:background="@drawable/bg_card"
+                    android:padding="16dp">
+
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:gravity="center_vertical">
+                        <TextView android:tag="fa" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="&#xf3cd;" android:textSize="16sp" android:textColor="@color/accent" />
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:layout_marginStart="10dp"
+                            android:text="Stato" style="@style/SectionTitle" />
+                        <TextView android:id="@+id/statoChip"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="…" android:textSize="11sp" android:textColor="@color/muted"
+                            android:paddingHorizontal="10dp" android:paddingVertical="4dp"
+                            android:background="@drawable/bg_riga" />
+                    </LinearLayout>
+
+                    <TextView android:id="@+id/nomeDispositivo"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp" android:text="—"
+                        android:textColor="@color/txt" android:textSize="17sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/proprietario"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:text="non collegato" style="@style/Muted" />
+                </LinearLayout>
+
+                <!-- ═══ PERMESSI ═══ -->
+                <LinearLayout
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="vertical" android:background="@drawable/bg_card"
+                    android:padding="16dp" android:layout_marginTop="14dp">
+
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:gravity="center_vertical">
+                        <TextView android:tag="fa" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="&#xf3ed;" android:textSize="16sp" android:textColor="@color/accent" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp" android:text="Permessi" style="@style/SectionTitle" />
+                    </LinearLayout>
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp" style="@style/Muted"
+                        android:text="Senza questi, il monitoraggio e i blocchi non funzionano." />
+
+                    <!-- riga: uso app -->
+                    <LinearLayout android:id="@+id/rigaUso"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:gravity="center_vertical"
+                        android:background="@drawable/bg_riga" android:padding="12dp" android:layout_marginTop="12dp">
+                        <TextView android:id="@+id/icoUso" android:tag="fa"
+                            android:layout_width="24dp" android:layout_height="wrap_content"
+                            android:text="&#xf057;" android:textSize="15sp" android:textColor="@color/bad" />
+                        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="6dp">
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                                android:text="Dati sull'utilizzo" android:textColor="@color/txt" android:textSize="14sp" />
+                            <TextView android:id="@+id/statoUso" android:layout_width="match_parent"
+                                android:layout_height="wrap_content" android:text="…" style="@style/Muted" />
+                        </LinearLayout>
+                        <TextView android:id="@+id/btnUso" android:tag="fa"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="&#xf105;" android:textSize="16sp" android:textColor="@color/muted" />
+                    </LinearLayout>
+
+                    <!-- riga: accessibilità -->
+                    <LinearLayout android:id="@+id/rigaAcc"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:gravity="center_vertical"
+                        android:background="@drawable/bg_riga" android:padding="12dp" android:layout_marginTop="8dp">
+                        <TextView android:id="@+id/icoAcc" android:tag="fa"
+                            android:layout_width="24dp" android:layout_height="wrap_content"
+                            android:text="&#xf057;" android:textSize="15sp" android:textColor="@color/bad" />
+                        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="6dp">
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                                android:text="Blocco giochi e siti" android:textColor="@color/txt" android:textSize="14sp" />
+                            <TextView android:id="@+id/statoAcc" android:layout_width="match_parent"
+                                android:layout_height="wrap_content" android:text="…" style="@style/Muted" />
+                        </LinearLayout>
+                        <TextView android:tag="fa" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="&#xf105;" android:textSize="16sp" android:textColor="@color/muted" />
+                    </LinearLayout>
+
+                    <!-- riga: filtro siti (VPN) -->
+                    <LinearLayout android:id="@+id/rigaVpn"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:gravity="center_vertical"
+                        android:background="@drawable/bg_riga" android:padding="12dp" android:layout_marginTop="8dp">
+                        <TextView android:id="@+id/icoVpn" android:tag="fa"
+                            android:layout_width="24dp" android:layout_height="wrap_content"
+                            android:text="&#xf057;" android:textSize="15sp" android:textColor="@color/bad" />
+                        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="6dp">
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                                android:text="Filtro siti di rete" android:textColor="@color/txt" android:textSize="14sp" />
+                            <TextView android:id="@+id/statoVpn" android:layout_width="match_parent"
+                                android:layout_height="wrap_content" android:text="…" style="@style/Muted" />
+                        </LinearLayout>
+                        <TextView android:tag="fa" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="&#xf105;" android:textSize="16sp" android:textColor="@color/muted" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- ═══ COLLEGAMENTO ═══ -->
+                <LinearLayout android:id="@+id/cardToken"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="vertical" android:background="@drawable/bg_card"
+                    android:padding="16dp" android:layout_marginTop="14dp">
+
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:gravity="center_vertical">
+                        <TextView android:tag="fa" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="&#xf0c1;" android:textSize="16sp" android:textColor="@color/accent" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp" android:text="Collegamento" style="@style/SectionTitle" />
+                    </LinearLayout>
+
+                    <!-- una volta salvato il codice non si vede più: resta solo la conferma -->
+                    <LinearLayout android:id="@+id/tokenSalvato"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:gravity="center_vertical"
+                        android:background="@drawable/bg_riga" android:padding="12dp" android:layout_marginTop="12dp"
+                        android:visibility="gone">
+                        <TextView android:tag="fa" android:layout_width="24dp" android:layout_height="wrap_content"
+                            android:text="&#xf023;" android:textSize="15sp" android:textColor="@color/ok" />
+                        <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="6dp">
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                                android:text="Codice salvato" android:textColor="@color/txt" android:textSize="14sp" />
+                            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                                android:text="Nascosto per sicurezza" style="@style/Muted" />
+                        </LinearLayout>
+                        <TextView android:id="@+id/cambiaToken"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="Cambia" android:textColor="@color/accent" android:textSize="13sp"
+                            android:padding="6dp" />
+                    </LinearLayout>
+
+                    <LinearLayout android:id="@+id/tokenInserimento"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="vertical" android:layout_marginTop="12dp">
+                        <EditText android:id="@+id/token"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:hint="Incolla qui il codice del dispositivo"
+                            android:textColorHint="@color/muted2" android:textColor="@color/txt"
+                            android:textSize="14sp" android:background="@drawable/bg_riga"
+                            android:padding="12dp" android:inputType="textPassword"
+                            android:autofillHints="" />
+                        <TextView android:id="@+id/save"
+                            android:layout_width="match_parent" android:layout_height="wrap_content"
+                            android:text="Collega" android:gravity="center"
+                            android:textColor="#FFFFFF" android:textSize="15sp" android:textStyle="bold"
+                            android:background="@drawable/bg_btn" android:padding="13dp"
+                            android:layout_marginTop="10dp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView android:id="@+id/status"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp" android:gravity="center" style="@style/Muted" />
+
+                <TextView android:id="@+id/versione"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp" android:layout_marginBottom="10dp"
+                    android:gravity="center" android:textColor="@color/muted2" android:textSize="11sp" />
+            </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
+
+    <!-- ═══ MENU LATERALE ═══ -->
+    <LinearLayout
+        android:id="@+id/drawerPanel"
+        android:layout_width="290dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:orientation="vertical"
+        android:background="@color/card2"
+        android:fitsSystemWindows="true">
+
+        <LinearLayout
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:padding="20dp" android:background="@color/card">
+            <TextView android:id="@+id/avatarDrawer"
+                android:layout_width="58dp" android:layout_height="58dp"
+                android:gravity="center" android:text="?"
+                android:textColor="#FFFFFF" android:textSize="20sp" android:textStyle="bold"
+                android:background="@drawable/bg_avatar" />
+            <TextView android:id="@+id/drawerNome"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="12dp" android:text="Non collegato"
+                android:textColor="@color/txt" android:textSize="16sp" android:textStyle="bold" />
+            <TextView android:id="@+id/drawerDisp"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="—" style="@style/Muted" />
+        </LinearLayout>
+
+        <TextView android:id="@+id/voceStato" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="  Stato e permessi"
+            android:drawablePadding="14dp" android:padding="16dp"
+            android:textColor="@color/txt" android:textSize="14.5sp" />
+        <TextView android:id="@+id/voceAggiorna" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="  Cerca aggiornamenti"
+            android:padding="16dp" android:textColor="@color/txt" android:textSize="14.5sp" />
+        <TextView android:id="@+id/voceProtezione" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="  Blocco totale"
+            android:padding="16dp" android:textColor="@color/txt" android:textSize="14.5sp" />
+
+        <View android:layout_width="match_parent" android:layout_height="1dp"
+            android:background="@color/border" android:layout_marginVertical="8dp" />
+
+        <TextView android:id="@+id/voceInfo" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="  Informazioni"
+            android:padding="16dp" android:textColor="@color/muted" android:textSize="14.5sp" />
+
+        <TextView android:id="@+id/drawerStatoDo"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:padding="16dp" style="@style/Muted" android:text="" />
+    </LinearLayout>
+</androidx.drawerlayout.widget.DrawerLayout>
