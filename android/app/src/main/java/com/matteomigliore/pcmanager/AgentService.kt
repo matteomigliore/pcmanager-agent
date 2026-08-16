@@ -42,6 +42,9 @@ class AgentService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForeground(1, notif())
+        // La sveglia va (ri)programmata a ogni avvio: e' cio' che ci riaccende se il telefono
+        // ci uccide (Xiaomi & co. terminano i servizi in background senza preavviso).
+        Watchdog.programma(this)
         if (started) return START_STICKY
         started = true
         DeviceOwner.applyProtections(this) // se siamo Device Owner: blinda subito il telefono
@@ -149,7 +152,23 @@ class AgentService : Service() {
             override fun onFailure(webSocket: WebSocket, t: Throwable, r: Response?) { reconnectSoon() }
         })
     }
-    private fun reconnectSoon() { scope.launch { delay(5_000); connect() } }
+    /** Una riconnessione alla volta: `onClosed` e `onFailure` possono arrivare entrambi. */
+    @Volatile private var riconnessioneInCorso = false
+    private fun reconnectSoon() {
+        if (riconnessioneInCorso) return
+        riconnessioneInCorso = true
+        scope.launch { delay(5_000); riconnessioneInCorso = false; connect() }
+    }
+
+    /**
+     * Invia sul socket segnalando il fallimento: `send` torna false se la connessione e' morta o
+     * la coda e' piena. Senza questo controllo l'agente crederebbe di stare inviando i dati mentre
+     * il cloud lo vede offline.
+     */
+    private fun invia(payload: String) {
+        val ok = try { ws?.send(payload) ?: false } catch (_: Exception) { false }
+        if (!ok) reconnectSoon()
+    }
 
     private fun handleCmd(text: String) {
         try {
@@ -193,11 +212,11 @@ class AgentService : Service() {
             val app = appLabel(s.packageName)
             items.put(JSONObject().put("winUser", "").put("app", app).put("seconds", minOf(secs, 60)))
         }
-        if (items.length() > 0) ws?.send(JSONObject().put("type", "usage").put("items", items).toString())
+        if (items.length() > 0) invia(JSONObject().put("type", "usage").put("items", items).toString())
         // Siti visitati: gli host raccolti dalla barra degli indirizzi (SiteGuard). Sul telefono
         // la cronologia del browser non e' leggibile, quindi questa e' l'unica fonte possibile.
         val siti = SiteGuard.svuotaCoda(this)
-        if (siti.length() > 0) ws?.send(JSONObject().put("type", "sites").put("items", siti).toString())
+        if (siti.length() > 0) invia(JSONObject().put("type", "sites").put("items", siti).toString())
     }
 
     /** Stato Android reale, raccolto esclusivamente con API locali e senza privilegi root. */
@@ -249,7 +268,7 @@ class AgentService : Service() {
                 .put("netDownKbs", traffic.first).put("netUpKbs", traffic.second)
                 .put("uptimeMs", SystemClock.elapsedRealtime())
                 .put("foregroundApp", currentForegroundApp() ?: ""))
-        ws?.send(JSONObject().put("type", if (diagnostic) "diagnostic" else "snapshot").put("data", data).toString())
+        invia(JSONObject().put("type", if (diagnostic) "diagnostic" else "snapshot").put("data", data).toString())
     }
 
     private fun round1(v: Double) = kotlin.math.round(v * 10.0) / 10.0
@@ -299,5 +318,10 @@ class AgentService : Service() {
             .setOngoing(true).build()
     }
 
-    override fun onDestroy() { started = false; diagnosticsJob?.cancel(); scope.cancel(); ws?.close(1000, "bye"); super.onDestroy() }
+    override fun onDestroy() {
+        started = false; diagnosticsJob?.cancel(); scope.cancel(); ws?.close(1000, "bye")
+        // Se ci stanno spegnendo, torniamo presto: sveglia ravvicinata invece dei 15 minuti pieni.
+        Watchdog.programma(this, 60_000)
+        super.onDestroy()
+    }
 }
