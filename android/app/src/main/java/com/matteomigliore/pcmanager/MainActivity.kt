@@ -97,9 +97,9 @@ class MainActivity : AppCompatActivity() {
     private fun inquadra() {
         try {
             val opzioni = com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE
-            val scanner = com.google.android.gms.mlkit.vision.barcode.GmsBarcodeScanning.getClient(
+            val scanner = com.google.mlkit.vision.codescanner.GmsBarcodeScanning.getClient(
                 this,
-                com.google.android.gms.mlkit.vision.barcode.GmsBarcodeScannerOptions.Builder()
+                com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions.Builder()
                     .setBarcodeFormats(opzioni).enableAutoZoom().build()
             )
             scanner.startScan()
