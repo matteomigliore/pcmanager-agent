@@ -72,7 +72,9 @@ class GameGuardService : AccessibilityService() {
         if (!r.gamesEnabled) return
         accrue()
         if (GameRules.isAllowedNow(this, r)) { unblockAll(); return }
-        val over = r.maxMinutes != null && GameRules.todaySeconds(this) >= r.maxMinutes * 60L
+        // il tetto comprende i minuti extra concessi dall'amministratore per oggi
+        val over = r.maxMinutes != null &&
+            GameRules.todaySeconds(this) >= (r.maxMinutes + GameRules.bonusNow(r)) * 60L
         Toast.makeText(this, if (over) "Tempo di gioco esaurito per oggi." else "Giochi non consentiti in questo orario.", Toast.LENGTH_LONG).show()
         if (isOwner()) hardBlock(pkg)               // blocco duro: sospende l'app (inaggirabile)
         performGlobalAction(GLOBAL_ACTION_HOME)       // + torna alla Home (anche senza Device Owner)

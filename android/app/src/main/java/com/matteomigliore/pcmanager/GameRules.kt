@@ -13,6 +13,10 @@ object GameRules {
         val windows: List<Pair<Int, Int>>, // minuti dall'inizio giornata [start,end)
         val maxMinutes: Int?,
         val tags: Set<String>,
+        /** Minuti extra concessi dall'amministratore per OGGI (richieste approvate + regalie). */
+        val bonusMinutes: Int = 0,
+        /** Giorno (yyyy-MM-dd, fuso di Roma) a cui il bonus si riferisce: scaduto quello, non vale. */
+        val bonusDay: String = "",
     )
 
     fun load(ctx: Context): Rules {
@@ -27,7 +31,8 @@ object GameRules {
             o.optJSONArray("tags")?.let { for (i in 0 until it.length()) tags.add(it.getString(i).trim().lowercase()) }
             Rules(
                 o.optBoolean("gamesEnabled", false), wins,
-                if (o.isNull("maxMinutes")) null else o.optInt("maxMinutes"), tags
+                if (o.isNull("maxMinutes")) null else o.optInt("maxMinutes"), tags,
+                o.optInt("bonusMinutes", 0), o.optString("bonusDay", "")
             )
         } catch (_: Exception) { Rules(false, emptyList(), null, emptySet()) }
     }
@@ -46,12 +51,26 @@ object GameRules {
         } catch (_: Exception) { false }
     }
 
+    /**
+     * Minuti extra validi ADESSO. Il cloud manda anche il giorno a cui si riferiscono: senza quel
+     * controllo un bonus concesso ieri varrebbe per sempre. Il confronto e' sulla data locale,
+     * la stessa con cui il cloud calcola la giornata (Europe/Rome).
+     */
+    fun bonusNow(r: Rules): Int =
+        if (r.bonusMinutes > 0 && (r.bonusDay.isEmpty() || r.bonusDay == todayIso())) r.bonusMinutes else 0
+
     fun isAllowedNow(ctx: Context, r: Rules): Boolean {
         val c = Calendar.getInstance(); val now = c.get(Calendar.HOUR_OF_DAY) * 60 + c.get(Calendar.MINUTE)
         val inWin = r.windows.isEmpty() || r.windows.any { now >= it.first && now < it.second }
-        val under = r.maxMinutes == null || todaySeconds(ctx) < r.maxMinutes * 60
+        // Il tetto giornaliero comprende i minuti extra concessi dall'amministratore: senza questo
+        // un "+30 min" approvato dalla dashboard funzionava sul PC e veniva ignorato sul telefono.
+        val tetto = r.maxMinutes?.let { (it + bonusNow(r)) * 60 }
+        val under = tetto == null || todaySeconds(ctx) < tetto
         return inWin && under
     }
+
+    private fun todayIso(): String =
+        java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
 
     private fun today(): String = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US).format(java.util.Date())
     fun todaySeconds(ctx: Context): Long {
