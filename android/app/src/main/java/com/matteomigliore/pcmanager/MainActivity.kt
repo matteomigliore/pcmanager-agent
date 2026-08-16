@@ -83,7 +83,18 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onResume() { super.onResume(); aggiorna() }
+    override fun onResume() {
+        super.onResume()
+        // Aprire l'app deve SEMPRE rimettere in moto l'agente: dopo un aggiornamento dell'APK o
+        // dopo che il telefono ha ucciso il servizio, altrimenti si resta offline senza accorgersene.
+        // Qui si riarma anche la sveglia: prima veniva programmata solo dal servizio, quindi se il
+        // servizio non partiva non c'era nulla a farlo ripartire.
+        if (!(sp.getString("token", "") ?: "").isNullOrEmpty()) {
+            Watchdog.assicuraAgenteAcceso(this)
+            Watchdog.programma(this)
+        }
+        aggiorna()
+    }
 
     @Deprecated("startActivityForResult: e' l'unico modo per ottenere il consenso alla VPN")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

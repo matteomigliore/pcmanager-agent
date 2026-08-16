@@ -69,6 +69,10 @@
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
+            <!-- dopo l'aggiornamento dell'APK Android ferma i servizi: qui li riaccendiamo -->
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
         </receiver>
     </application>
 </manifest>
