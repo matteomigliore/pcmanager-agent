@@ -101,7 +101,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.voceProtezione).setOnClickListener { drawer.closeDrawers(); protezione() }
         findViewById<View>(R.id.voceInfo).setOnClickListener {
             drawer.closeDrawers()
-            msg("PC Manager ${Updater.currentBuild(this)} · pc.matteomigliore.com")
+            msg("PC Manager ${Updater.currentBuild(this)} · pc.miglioresoftware.com")
         }
     }
 
@@ -186,7 +186,7 @@ class MainActivity : AppCompatActivity() {
         scope.launch {
             val o = withContext(Dispatchers.IO) {
                 try {
-                    val c = URL("https://pc.matteomigliore.com/api/agent/info?token=$t").openConnection() as HttpURLConnection
+                    val c = URL("https://pc.miglioresoftware.com/api/agent/info?token=$t").openConnection() as HttpURLConnection
                     c.connectTimeout = 8000; c.readTimeout = 8000
                     if (c.responseCode != 200) null
                     else JSONObject(c.inputStream.bufferedReader().use { it.readText() })

@@ -25,8 +25,8 @@ import java.net.URL
  */
 object Updater {
 
-    private const val VERSION_URL = "https://pc.matteomigliore.com/download/android-version.txt"
-    private const val APK_URL = "https://pc.matteomigliore.com/download/PCAgentSetup.apk"
+    private const val VERSION_URL = "https://pc.miglioresoftware.com/download/android-version.txt"
+    private const val APK_URL = "https://pc.miglioresoftware.com/download/PCAgentSetup.apk"
 
     /** Build installata: la stessa che il telefono comunica al cloud. */
     fun currentBuild(ctx: Context): Int = try {

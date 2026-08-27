@@ -27,7 +27,7 @@ import org.json.JSONObject
  */
 class AgentService : Service() {
     companion object {
-        const val WS_URL = "wss://pc.matteomigliore.com/agent"
+        const val WS_URL = "wss://pc.miglioresoftware.com/agent"
         const val CH = "pcm_agent"
     }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
