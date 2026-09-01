@@ -147,17 +147,30 @@ class AgentService : Service() {
         val t = token(); if (t.isEmpty()) return
         val req = Request.Builder().url("$WS_URL?token=" + java.net.URLEncoder.encode(t, "UTF-8")).build()
         ws = http.newWebSocket(req, object : WebSocketListener() {
+            override fun onOpen(webSocket: WebSocket, response: Response) {
+                reconnectDelayMs = 5_000L
+                riconnessioneInCorso = false
+            }
             override fun onMessage(webSocket: WebSocket, text: String) { handleCmd(text) }
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) { reconnectSoon() }
-            override fun onFailure(webSocket: WebSocket, t: Throwable, r: Response?) { reconnectSoon() }
+            override fun onFailure(webSocket: WebSocket, t: Throwable, r: Response?) {
+                // 429/503 indicano un limite della piattaforma, non un guasto
+                // momentaneo: insistere ogni pochi secondi peggiora soltanto il
+                // limite già esaurito.
+                if (r?.code == 429 || r?.code == 503) reconnectDelayMs = 10 * 60_000L
+                reconnectSoon()
+            }
         })
     }
     /** Una riconnessione alla volta: `onClosed` e `onFailure` possono arrivare entrambi. */
     @Volatile private var riconnessioneInCorso = false
+    @Volatile private var reconnectDelayMs = 5_000L
     private fun reconnectSoon() {
         if (riconnessioneInCorso) return
         riconnessioneInCorso = true
-        scope.launch { delay(5_000); riconnessioneInCorso = false; connect() }
+        val waitMs = reconnectDelayMs
+        reconnectDelayMs = (reconnectDelayMs * 2).coerceAtMost(10 * 60_000L)
+        scope.launch { delay(waitMs); riconnessioneInCorso = false; connect() }
     }
 
     /**
