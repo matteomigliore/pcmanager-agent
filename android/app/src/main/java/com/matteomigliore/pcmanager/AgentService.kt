@@ -154,9 +154,6 @@ class AgentService : Service() {
             override fun onMessage(webSocket: WebSocket, text: String) { handleCmd(text) }
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) { reconnectSoon() }
             override fun onFailure(webSocket: WebSocket, t: Throwable, r: Response?) {
-                // 429/503 indicano un limite della piattaforma, non un guasto
-                // momentaneo: insistere ogni pochi secondi peggiora soltanto il
-                // limite già esaurito.
                 if (r?.code == 429 || r?.code == 503) reconnectDelayMs = 10 * 60_000L
                 reconnectSoon()
             }

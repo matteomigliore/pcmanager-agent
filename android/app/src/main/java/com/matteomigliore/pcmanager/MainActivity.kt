@@ -145,11 +145,24 @@ class MainActivity : AppCompatActivity() {
                     msg("Collegato.")
                     aggiorna()
                 }
-                .addOnFailureListener { msg("Lettura non riuscita. Riprova o incolla il codice.") }
+                .addOnFailureListener { e -> ripiegoCodice(e) }
                 .addOnCanceledListener { }
-        } catch (_: Exception) {
-            msg("Scanner non disponibile su questo telefono: incolla il codice.")
+        } catch (e: Exception) {
+            ripiegoCodice(e)
         }
+    }
+
+    /**
+     * Lo scanner QR e' un modulo di Google Play Services scaricato a richiesta: su alcuni
+     * telefoni manca, e' bloccato o non riesce a scaricarsi. In quel caso non si lascia
+     * l'utente davanti a un errore generico: si apre subito il campo per incollare il codice,
+     * che funziona sempre. Il motivo reale viene mostrato, altrimenti e' impossibile capire
+     * perche' non va.
+     */
+    private fun ripiegoCodice(e: Exception) {
+        val motivo = (e.message ?: e::class.java.simpleName).take(120)
+        mostraInserimento(true)
+        msg("Scanner non disponibile: incolla il codice qui sotto. ($motivo)")
     }
 
     /* ───────── stato ───────── */
