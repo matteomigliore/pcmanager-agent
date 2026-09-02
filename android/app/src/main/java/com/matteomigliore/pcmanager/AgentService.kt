@@ -237,8 +237,19 @@ class AgentService : Service() {
         val batteryTemp = battery?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Int.MIN_VALUE)
             ?.takeIf { it != Int.MIN_VALUE }?.div(10.0)
         val batteryStatus = battery?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
-        val charging = batteryStatus == BatteryManager.BATTERY_STATUS_CHARGING ||
-            batteryStatus == BatteryManager.BATTERY_STATUS_FULL
+        /*
+         * "Sotto carica" = spina collegata, NON lo stato della batteria.
+         *
+         * A batteria piena Android alterna di continuo BATTERY_STATUS_FULL e NOT_CHARGING
+         * (mantenimento della carica): leggendo lo stato, il telefono a 100% attaccato al
+         * caricabatterie sembrava collegarsi e scollegarsi in continuazione, e la dashboard
+         * notificava "e' sotto carica" / "non e' piu' sotto carica" a ripetizione.
+         * EXTRA_PLUGGED dice se il cavo c'e', e resta stabile.
+         */
+        val plugged = battery?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0
+        val charging = if (battery != null) plugged != 0
+            else batteryStatus == BatteryManager.BATTERY_STATUS_CHARGING ||
+                batteryStatus == BatteryManager.BATTERY_STATUS_FULL
 
         val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         val mem = ActivityManager.MemoryInfo().also(am::getMemoryInfo)
@@ -276,7 +287,7 @@ class AgentService : Service() {
                 .put("cpuPct", cpuUsage())
                 .put("cpuCores", Runtime.getRuntime().availableProcessors())
                 .put("thermalStatus", if (Build.VERSION.SDK_INT >= 29) pm.currentThermalStatus else -1)
-                .put("powerSave", pm.isPowerSaveMode).put("charging", charging)
+                .put("powerSave", pm.isPowerSaveMode).put("charging", charging).put("plugged", plugged != 0)
                 .put("batteryTemperatureC", batteryTemp ?: JSONObject.NULL)
                 .put("storageAvailableBytes", stat.availableBytes).put("storageTotalBytes", stat.totalBytes)
                 .put("netDownKbs", traffic.first).put("netUpKbs", traffic.second)

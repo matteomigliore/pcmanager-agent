@@ -1,0 +1,30 @@
+# Build dell'APK dell'agente Android su Azure DevOps (agent Microsoft-hosted con Android SDK).
+# Crea una pipeline puntando a questo file. Trigger manuale (Run pipeline).
+# L'output è un APK debug (auto-firmato) scaricabile dagli Artifacts → installabile via sideload.
+
+trigger: none
+pr: none
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - task: JavaToolInstaller@0
+    inputs:
+      versionSpec: '17'
+      jdkArchitectureOption: x64
+      jdkSourceOption: PreInstalled
+
+  - script: |
+      set -e
+      cd android-agent
+      yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
+      gradle wrapper --gradle-version 8.7
+      ./gradlew assembleDebug --no-daemon --stacktrace
+    displayName: Build APK (debug)
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      PathtoPublish: 'android-agent/app/build/outputs/apk/debug/app-debug.apk'
+      ArtifactName: 'apk'
+    displayName: Pubblica APK

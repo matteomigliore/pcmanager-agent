@@ -1,7 +1,7 @@
 # PC Manager — Agente Android (scaffold)
 
 App nativa Android che fa per i telefoni ciò che l'agente Windows fa per i PC:
-si connette al cloud (`wss://pc.matteomigliore.com/agent?token=...`), invia
+si connette al cloud (`wss://pc.miglioresoftware.com/agent?token=...`), invia
 **uso app** (via UsageStats) e stato (batteria/online), e riceve le **regole**
 (restrizioni gioco/app). Riusa lo stesso protocollo WebSocket dell'agente PC.
 
