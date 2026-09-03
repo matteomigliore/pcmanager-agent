@@ -11,8 +11,8 @@ android {
         applicationId = "com.matteomigliore.pcmanager"
         minSdk = 26
         targetSdk = 34
-        versionCode = 18
-        versionName = "0.8.3"
+        versionCode = 19
+        versionName = "0.8.4"
     }
     /*
      * Chiave di firma STABILE.

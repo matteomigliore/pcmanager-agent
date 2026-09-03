@@ -36,6 +36,9 @@ class AgentService : Service() {
     private var diagnosticsJob: Job? = null
     private var previousCpu: Pair<Long, Long>? = null
     private var previousNetwork: Triple<Long, Long, Long>? = null
+    private var lastSnapshotSignature: String? = null
+    private var lastSnapshotSentAt = 0L
+    private val previousUsageTotals = HashMap<String, Long>()
     private val http = OkHttpClient.Builder().pingInterval(20, java.util.concurrent.TimeUnit.SECONDS).build()
 
     override fun onBind(i: Intent?): IBinder? = null
@@ -49,9 +52,10 @@ class AgentService : Service() {
         started = true
         DeviceOwner.applyProtections(this) // se siamo Device Owner: blinda subito il telefono
         connect()
-        // Lo snapshot leggero ogni 10 secondi mantiene correttamente lo stato online nel cloud.
-        // Le statistiche d'uso, più costose, restano invece a cadenza di un minuto.
-        scope.launch { while (isActive) { try { if (diagnosticsJob?.isActive != true) sendSnapshot(false) } catch (_: Exception) {}; delay(10_000) } }
+        // I controlli restano locali e rapidi, ma il cloud riceve soltanto un cambiamento reale
+        // (carica, percentuale batteria, risparmio energetico...) o un checkpoint ogni 5 minuti.
+        // Prima ogni telefono inviava 6 richieste/minuto anche immobile e a schermo spento.
+        scope.launch { while (isActive) { delay(15_000); try { if (diagnosticsJob?.isActive != true) sendSnapshot(false) } catch (_: Exception) {} } }
         scope.launch { while (isActive) { try { sendUsage() } catch (_: Exception) {}; delay(60_000) } }
         // Aggiornamento automatico: come sul PC. Primo giro dopo un minuto (lascia salire la rete
         // all'avvio), poi ogni 6 ore: gli APK sono pochi MB e il controllo e' un file di testo.
@@ -143,17 +147,25 @@ class AgentService : Service() {
     private fun token(): String =
         getSharedPreferences("pcm", Context.MODE_PRIVATE).getString("token", "") ?: ""
 
-    private fun connect() {
+    @Synchronized private fun connect() {
+        if (ws != null) return
         val t = token(); if (t.isEmpty()) return
         val req = Request.Builder().url("$WS_URL?token=" + java.net.URLEncoder.encode(t, "UTF-8")).build()
         ws = http.newWebSocket(req, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
-                reconnectDelayMs = 5_000L
                 riconnessioneInCorso = false
+                scope.launch { try { sendSnapshot(false, true) } catch (_: Exception) {} }
+                // Una connessione che resta viva due minuti è davvero stabile: solo allora
+                // azzeriamo il backoff, evitando raffiche se il server accetta e chiude subito.
+                scope.launch { delay(120_000); if (ws === webSocket) reconnectDelayMs = 5_000L }
             }
             override fun onMessage(webSocket: WebSocket, text: String) { handleCmd(text) }
-            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) { reconnectSoon() }
+            override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                if (ws === webSocket) { ws = null; reconnectSoon() }
+            }
             override fun onFailure(webSocket: WebSocket, t: Throwable, r: Response?) {
+                if (ws !== webSocket) return
+                ws = null
                 if (r?.code == 429 || r?.code == 503) reconnectDelayMs = 10 * 60_000L
                 reconnectSoon()
             }
@@ -162,10 +174,10 @@ class AgentService : Service() {
     /** Una riconnessione alla volta: `onClosed` e `onFailure` possono arrivare entrambi. */
     @Volatile private var riconnessioneInCorso = false
     @Volatile private var reconnectDelayMs = 5_000L
-    private fun reconnectSoon() {
+    @Synchronized private fun reconnectSoon() {
         if (riconnessioneInCorso) return
         riconnessioneInCorso = true
-        val waitMs = reconnectDelayMs
+        val waitMs = (reconnectDelayMs * kotlin.random.Random.nextDouble(0.8, 1.2)).toLong()
         reconnectDelayMs = (reconnectDelayMs * 2).coerceAtMost(10 * 60_000L)
         scope.launch { delay(waitMs); riconnessioneInCorso = false; connect() }
     }
@@ -177,7 +189,7 @@ class AgentService : Service() {
      */
     private fun invia(payload: String) {
         val ok = try { ws?.send(payload) ?: false } catch (_: Exception) { false }
-        if (!ok) reconnectSoon()
+        if (!ok) { ws?.cancel(); ws = null; reconnectSoon() }
     }
 
     private fun handleCmd(text: String) {
@@ -193,6 +205,8 @@ class AgentService : Service() {
                     o.optInt("durationSeconds", 120).coerceIn(15, 300),
                     o.optLong("intervalMs", 2_000).coerceIn(1_000, 10_000)
                 )
+            } else if (o.optString("cmd") == "snapshot-now") {
+                scope.launch { try { sendSnapshot(false, true) } catch (_: Exception) {} }
             }
         } catch (_: Exception) {}
     }
@@ -210,14 +224,17 @@ class AgentService : Service() {
         }
     }
 
-    /** Uso app nell'ultimo minuto, dai contatori UsageStats (richiede permesso utente). */
+    /** Uso app dall'ultimo controllo, dai contatori cumulativi di UsageStats. */
     private fun sendUsage() {
         val usm = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val end = System.currentTimeMillis(); val start = end - 60_000
         val stats = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, start, end) ?: return
         val items = JSONArray()
         for (s in stats) {
-            val secs = (s.totalTimeInForeground / 1000).toInt()
+            val current = s.totalTimeInForeground
+            val previous = previousUsageTotals.put(s.packageName, current)
+            // Il primo giro crea la base: non reinvia come nuovo tutto l'utilizzo della giornata.
+            val secs = if (previous == null || current < previous) 0 else ((current - previous) / 1000).toInt()
             if (secs <= 0) continue
             val app = appLabel(s.packageName)
             items.put(JSONObject().put("winUser", "").put("app", app).put("seconds", minOf(secs, 60)))
@@ -230,7 +247,7 @@ class AgentService : Service() {
     }
 
     /** Stato Android reale, raccolto esclusivamente con API locali e senza privilegi root. */
-    private fun sendSnapshot(diagnostic: Boolean) {
+    private fun sendSnapshot(diagnostic: Boolean, force: Boolean = false) {
         val bm = getSystemService(Context.BATTERY_SERVICE) as BatteryManager
         val level = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
         val battery = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
@@ -293,6 +310,23 @@ class AgentService : Service() {
                 .put("netDownKbs", traffic.first).put("netUpKbs", traffic.second)
                 .put("uptimeMs", SystemClock.elapsedRealtime())
                 .put("foregroundApp", currentForegroundApp() ?: ""))
+
+        if (!diagnostic && !force) {
+            // La firma è volutamente composta solo dallo stato che l'utente deve vedere subito.
+            // CPU, rete, RAM, uptime e temperatura oscillano continuamente e vengono inclusi nel
+            // checkpoint, ma non devono trasformare di nuovo l'agente in un polling permanente.
+            val signature = listOf(
+                level, charging, plugged != 0, mem.lowMemory, pm.isPowerSaveMode,
+                if (Build.VERSION.SDK_INT >= 29) pm.currentThermalStatus else -1,
+                DeviceOwner.isOwner(this), Updater.currentBuild(this)
+            ).joinToString("|")
+            val now = SystemClock.elapsedRealtime()
+            if (signature == lastSnapshotSignature && now - lastSnapshotSentAt < 5 * 60_000L) return
+            lastSnapshotSignature = signature
+            lastSnapshotSentAt = now
+        } else if (!diagnostic) {
+            lastSnapshotSentAt = SystemClock.elapsedRealtime()
+        }
         invia(JSONObject().put("type", if (diagnostic) "diagnostic" else "snapshot").put("data", data).toString())
     }
 
