@@ -73,7 +73,7 @@ class MainActivity : AppCompatActivity() {
         }
         // Batteria: e' l'unico che si concede con un solo tocco, senza girare nei menu.
         findViewById<View>(R.id.rigaBatteria).setOnClickListener {
-            if (batteriaLibera()) { msg("Gia' attivo."); return@setOnClickListener }
+            if (batteriaLibera()) { msg("Già attivo."); return@setOnClickListener }
             @android.annotation.SuppressLint("BatteryLife")
             val i = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
                 android.net.Uri.parse("package:$packageName"))

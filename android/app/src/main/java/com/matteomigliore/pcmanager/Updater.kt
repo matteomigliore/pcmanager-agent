@@ -42,8 +42,8 @@ object Updater {
         data class Fallito(val motivo: String) : Esito()
 
         fun messaggio(): String = when (this) {
-            is Aggiornato -> "Aggiornamento build $build scaricato. Conferma l'installazione se Android lo richiede."
-            is GiaAggiornato -> "Nessun aggiornamento: hai gia' la build $build."
+            is Aggiornato -> "Aggiornamento build $build avviato. Sarà installato automaticamente quando Android lo consente."
+            is GiaAggiornato -> "Nessun aggiornamento: hai già la build $build."
             is Fallito -> "Aggiornamento non riuscito: $motivo"
         }
     }
@@ -63,7 +63,7 @@ object Updater {
             val apk = scarica(ctx, "$APK_URL?t=${System.currentTimeMillis()}")
                 ?: return Esito.Fallito("download dell'APK non riuscito")
             val pacchetto = infoApk(ctx, apk)
-                ?: return Esito.Fallito("il file scaricato non e' un APK valido")
+                ?: return Esito.Fallito("il file scaricato non è un APK valido")
             val buildApk = buildDi(pacchetto)
             if (pacchetto.packageName != ctx.packageName)
                 return Esito.Fallito("il pacchetto pubblicato non appartiene a PC Manager")
@@ -110,6 +110,13 @@ object Updater {
     private fun installa(ctx: Context, apk: java.io.File) {
         val pi = ctx.packageManager.packageInstaller
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
+        params.setAppPackageName(ctx.packageName)
+        params.setSize(apk.length())
+        // Da Android 12 chiediamo esplicitamente l'installazione senza intervento. Android la
+        // concede quando l'app sta aggiornando sé stessa; in caso contrario il receiver apre
+        // comunque la conferma di sistema, quindi il percorso di ripiego resta sempre valido.
+        if (Build.VERSION.SDK_INT >= 31)
+            params.setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
         val sessionId = pi.createSession(params)
         pi.openSession(sessionId).use { s ->
             s.openWrite("agent", 0, apk.length()).use { out ->
