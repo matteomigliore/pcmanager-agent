@@ -96,7 +96,10 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.voceStato).setOnClickListener { drawer.closeDrawers(); aggiorna() }
         findViewById<View>(R.id.voceAggiorna).setOnClickListener {
             drawer.closeDrawers(); msg("Controllo aggiornamenti…")
-            scope.launch { withContext(Dispatchers.IO) { Updater.checkAndUpdate(this@MainActivity) } }
+            scope.launch {
+                val esito = withContext(Dispatchers.IO) { Updater.checkAndUpdate(this@MainActivity) }
+                msg(esito.messaggio(), Toast.LENGTH_LONG)
+            }
         }
         findViewById<View>(R.id.voceProtezione).setOnClickListener { drawer.closeDrawers(); protezione() }
         findViewById<View>(R.id.voceInfo).setOnClickListener {
@@ -316,7 +319,7 @@ class MainActivity : AppCompatActivity() {
         s.contains(packageName)
     } catch (_: Exception) { false }
 
-    private fun msg(t: String) { Toast.makeText(this, t, Toast.LENGTH_SHORT).show() }
+    private fun msg(t: String, durata: Int = Toast.LENGTH_SHORT) { Toast.makeText(this, t, durata).show() }
 
     /** Applica il font FontAwesome a tutte le TextView marcate con tag "fa". */
     private fun applicaFontAwesome(v: View) {

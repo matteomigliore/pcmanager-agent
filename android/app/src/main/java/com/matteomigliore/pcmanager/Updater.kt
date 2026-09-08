@@ -3,7 +3,9 @@ package com.matteomigliore.pcmanager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageInfo
 import android.content.pm.PackageInstaller
+import android.content.pm.PackageManager
 import android.os.Build
 import java.net.HttpURLConnection
 import java.net.URL
@@ -34,22 +36,61 @@ object Updater {
         if (Build.VERSION.SDK_INT >= 28) pi.longVersionCode.toInt() else @Suppress("DEPRECATION") pi.versionCode
     } catch (_: Exception) { 0 }
 
+    sealed class Esito {
+        data class Aggiornato(val build: Int) : Esito()
+        data class GiaAggiornato(val build: Int) : Esito()
+        data class Fallito(val motivo: String) : Esito()
+
+        fun messaggio(): String = when (this) {
+            is Aggiornato -> "Aggiornamento build $build scaricato. Conferma l'installazione se Android lo richiede."
+            is GiaAggiornato -> "Nessun aggiornamento: hai gia' la build $build."
+            is Fallito -> "Aggiornamento non riuscito: $motivo"
+        }
+    }
+
     /**
      * Controlla e, se c'è una build più recente, scarica e installa.
      * Non lancia mai: un aggiornamento fallito non deve fermare il monitoraggio.
      */
-    fun checkAndUpdate(ctx: Context) {
-        try {
-            val ultima = leggiTesto(VERSION_URL)?.trim()?.toIntOrNull() ?: return
-            if (ultima <= currentBuild(ctx)) return
-            val apk = scarica(ctx, APK_URL) ?: return
+    fun checkAndUpdate(ctx: Context): Esito {
+        return try {
+            // Il parametro rende il controllo corretto anche su proxy o telefoni che hanno
+            // conservato una vecchia risposta prima dell'introduzione di Cache-Control no-store.
+            val ultima = leggiTesto("$VERSION_URL?t=${System.currentTimeMillis()}")?.trim()?.toIntOrNull()
+                ?: return Esito.Fallito("non riesco a leggere la versione disponibile")
+            val corrente = currentBuild(ctx)
+            if (ultima <= corrente) return Esito.GiaAggiornato(corrente)
+            val apk = scarica(ctx, "$APK_URL?t=${System.currentTimeMillis()}")
+                ?: return Esito.Fallito("download dell'APK non riuscito")
+            val pacchetto = infoApk(ctx, apk)
+                ?: return Esito.Fallito("il file scaricato non e' un APK valido")
+            val buildApk = buildDi(pacchetto)
+            if (pacchetto.packageName != ctx.packageName)
+                return Esito.Fallito("il pacchetto pubblicato non appartiene a PC Manager")
+            if (buildApk != ultima)
+                return Esito.Fallito("server incoerente: dichiara build $ultima ma offre build $buildApk")
             installa(ctx, apk)
-        } catch (_: Exception) { /* riprova al giro successivo */ }
+            Esito.Aggiornato(ultima)
+        } catch (e: Exception) {
+            Esito.Fallito(e.message?.take(120) ?: e.javaClass.simpleName)
+        }
     }
+
+    @Suppress("DEPRECATION")
+    private fun infoApk(ctx: Context, apk: java.io.File): PackageInfo? =
+        if (Build.VERSION.SDK_INT >= 33)
+            ctx.packageManager.getPackageArchiveInfo(apk.absolutePath, PackageManager.PackageInfoFlags.of(0))
+        else ctx.packageManager.getPackageArchiveInfo(apk.absolutePath, 0)
+
+    private fun buildDi(info: PackageInfo): Int =
+        if (Build.VERSION.SDK_INT >= 28) info.longVersionCode.toInt()
+        else @Suppress("DEPRECATION") info.versionCode
 
     private fun leggiTesto(url: String): String? = try {
         (URL(url).openConnection() as HttpURLConnection).run {
             connectTimeout = 15_000; readTimeout = 15_000; instanceFollowRedirects = true
+            useCaches = false
+            if (responseCode !in 200..299) { disconnect(); return@run null }
             inputStream.bufferedReader().use { it.readText() }.also { disconnect() }
         }
     } catch (_: Exception) { null }
@@ -58,6 +99,8 @@ object Updater {
         val f = java.io.File(ctx.cacheDir, "agent-update.apk")
         (URL(url).openConnection() as HttpURLConnection).run {
             connectTimeout = 20_000; readTimeout = 120_000; instanceFollowRedirects = true
+            useCaches = false
+            if (responseCode !in 200..299) { disconnect(); return@run null }
             inputStream.use { inp -> f.outputStream().use { out -> inp.copyTo(out) } }
             disconnect()
         }
@@ -75,7 +118,10 @@ object Updater {
             }
             val flags = if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0
             val intent = PendingIntent.getBroadcast(
-                ctx, sessionId, Intent("$PKG_ACTION").setPackage(ctx.packageName), flags
+                // Deve essere un Intent esplicito. setPackage() limita soltanto la ricerca al
+                // nostro pacchetto, ma InstallResultReceiver non ha (correttamente) un
+                // intent-filter: con l'Intent implicito la richiesta di conferma andava persa.
+                ctx, sessionId, Intent(ctx, InstallResultReceiver::class.java).setAction(PKG_ACTION), flags
             )
             s.commit(intent.intentSender)
         }

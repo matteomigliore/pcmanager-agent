@@ -39,6 +39,18 @@ class AgentService : Service() {
     private var lastSnapshotSignature: String? = null
     private var lastSnapshotSentAt = 0L
     private val previousUsageTotals = HashMap<String, Long>()
+    private val intervalloUsoMs = 15 * 60_000L
+    private var previousUsageAt = 0L
+
+    override fun onCreate() {
+        super.onCreate()
+        val prefs = getSharedPreferences("pcm_usage", MODE_PRIVATE)
+        previousUsageAt = prefs.getLong("at", 0L)
+        try {
+            val saved = JSONObject(prefs.getString("totals", "{}") ?: "{}")
+            saved.keys().forEach { previousUsageTotals[it] = saved.getLong(it) }
+        } catch (_: Exception) { previousUsageTotals.clear(); previousUsageAt = 0L }
+    }
     private val http = OkHttpClient.Builder().pingInterval(20, java.util.concurrent.TimeUnit.SECONDS).build()
 
     override fun onBind(i: Intent?): IBinder? = null
@@ -56,7 +68,10 @@ class AgentService : Service() {
         // (carica, percentuale batteria, risparmio energetico...) o un checkpoint ogni 5 minuti.
         // Prima ogni telefono inviava 6 richieste/minuto anche immobile e a schermo spento.
         scope.launch { while (isActive) { delay(15_000); try { if (diagnosticsJob?.isActive != true) sendSnapshot(false) } catch (_: Exception) {} } }
-        scope.launch { while (isActive) { try { sendUsage() } catch (_: Exception) {}; delay(60_000) } }
+        // I contatori Android sono cumulativi: leggerli ogni minuto non aggiunge
+        // precisione, ma crea fino a 1.440 messaggi cloud al giorno. Un delta
+        // ogni 15 minuti conserva gli stessi secondi d'uso con 96 invii massimi.
+        scope.launch { while (isActive) { try { sendUsage() } catch (_: Exception) {}; delay(intervalloUsoMs) } }
         // Aggiornamento automatico: come sul PC. Primo giro dopo un minuto (lascia salire la rete
         // all'avvio), poi ogni 6 ore: gli APK sono pochi MB e il controllo e' un file di testo.
         scope.launch {
@@ -187,9 +202,10 @@ class AgentService : Service() {
      * la coda e' piena. Senza questo controllo l'agente crederebbe di stare inviando i dati mentre
      * il cloud lo vede offline.
      */
-    private fun invia(payload: String) {
+    private fun invia(payload: String): Boolean {
         val ok = try { ws?.send(payload) ?: false } catch (_: Exception) { false }
         if (!ok) { ws?.cancel(); ws = null; reconnectSoon() }
+        return ok
     }
 
     private fun handleCmd(text: String) {
@@ -225,21 +241,30 @@ class AgentService : Service() {
     }
 
     /** Uso app dall'ultimo controllo, dai contatori cumulativi di UsageStats. */
-    private fun sendUsage() {
+    @Synchronized private fun sendUsage() {
         val usm = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
-        val end = System.currentTimeMillis(); val start = end - 60_000
+        val end = System.currentTimeMillis()
+        val start = if (previousUsageAt in 1 until end) previousUsageAt else end - intervalloUsoMs
         val stats = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, start, end) ?: return
         val items = JSONArray()
+        val totals = HashMap<String, Long>()
+        val tetto = ((end - start) / 1000).coerceIn(0, Int.MAX_VALUE.toLong()).toInt()
         for (s in stats) {
             val current = s.totalTimeInForeground
-            val previous = previousUsageTotals.put(s.packageName, current)
+            totals[s.packageName] = current
+            val previous = previousUsageTotals[s.packageName]
             // Il primo giro crea la base: non reinvia come nuovo tutto l'utilizzo della giornata.
             val secs = if (previous == null || current < previous) 0 else ((current - previous) / 1000).toInt()
             if (secs <= 0) continue
             val app = appLabel(s.packageName)
-            items.put(JSONObject().put("winUser", "").put("app", app).put("seconds", minOf(secs, 60)))
+            items.put(JSONObject().put("winUser", "").put("app", app).put("seconds", minOf(secs, tetto)))
         }
-        if (items.length() > 0) invia(JSONObject().put("type", "usage").put("items", items).toString())
+        if (items.length() > 0 && !invia(JSONObject().put("type", "usage").put("items", items).toString())) return
+        previousUsageTotals.clear()
+        previousUsageTotals.putAll(totals)
+        previousUsageAt = end
+        getSharedPreferences("pcm_usage", MODE_PRIVATE).edit()
+            .putLong("at", end).putString("totals", JSONObject(totals as Map<*, *>).toString()).commit()
         // Siti visitati: gli host raccolti dalla barra degli indirizzi (SiteGuard). Sul telefono
         // la cronologia del browser non e' leggibile, quindi questa e' l'unica fonte possibile.
         val siti = SiteGuard.svuotaCoda(this)
@@ -312,7 +337,7 @@ class AgentService : Service() {
                 .put("foregroundApp", currentForegroundApp() ?: ""))
 
         if (!diagnostic && !force) {
-            // La firma è volutamente composta solo dallo stato che l'utente deve vedere subito.
+            // La firma es volutamente composta solo dallo stato che l'utente deve vedere subito.
             // CPU, rete, RAM, uptime e temperatura oscillano continuamente e vengono inclusi nel
             // checkpoint, ma non devono trasformare di nuovo l'agente in un polling permanente.
             val signature = listOf(
